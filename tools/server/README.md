@@ -471,6 +471,8 @@ These words will not be included in the completion, so make sure to add them to 
 
 `logit_bias`: Modify the likelihood of a token appearing in the generated text completion. For example, use `"logit_bias": [[15043,1.0]]` to increase the likelihood of the token 'Hello', or `"logit_bias": [[15043,-1.0]]` to decrease its likelihood. Setting the value to false, `"logit_bias": [[15043,false]]` ensures that the token `Hello` is never produced. The tokens can also be represented as strings, e.g. `[["Hello, World!",-0.5]]` will reduce the likelihood of all the individual tokens that represent the string `Hello, World!`, just like the `presence_penalty` does. Default: `[]`
 
+`allowed_tokens`: Specify the token ids that are allowed to be sampled by the model. For example, use `"allowed_tokens": [1838, 301]` to only allow the tokens `1838` and `301` when the next token will be sampled. Special tokens are always allowed; the remaining tokens that are not specified in `allowed_tokens`, are masked. Default: `[]`, meaning that all tokens are allowed. Cannot be used together with `logit_bias` (`logit_bias` will be considered and `allowed_tokens` ignored).
+
 `n_probs`: If greater than 0, the response also contains the probabilities of top N tokens for each generated token given the sampling settings. Note that for temperature < 0 the tokens are sampled greedily but token probabilities are still being calculated via a simple softmax of the logits without considering any other sampler settings. Default: `0`
 
 `min_keep`: If greater than 0, force samplers to return N possible tokens at minimum. Default: `0`

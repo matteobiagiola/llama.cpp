@@ -358,6 +358,10 @@ extern "C" {
         float bias;
     } llama_logit_bias;
 
+    typedef struct llama_allowed_token {
+        llama_token token;
+    } llama_allowed_token;
+
     typedef struct llama_sampler_chain_params {
         bool no_perf; // whether to measure performance timings
     } llama_sampler_chain_params;

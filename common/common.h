@@ -178,6 +178,7 @@ struct common_params_sampling {
     std::set<llama_token>               preserved_tokens;
 
     std::vector<llama_logit_bias> logit_bias; // logit biases to apply
+    std::vector<llama_allowed_token> allowed_tokens; // allowed tokens
 
     // print the parameters into a string
     std::string print() const;

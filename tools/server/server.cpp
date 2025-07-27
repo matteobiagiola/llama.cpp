@@ -189,6 +189,7 @@ struct slot_params {
             {"ignore_eos",                sampling.ignore_eos},
             {"stream",                    stream},
             {"logit_bias",                format_logit_bias(sampling.logit_bias)},
+            {"allowed_tokens",              format_allowed_tokens(sampling.allowed_tokens)},
             {"n_probs",                   sampling.n_probs},
             {"min_keep",                  sampling.min_keep},
             {"grammar",                   sampling.grammar},
@@ -471,6 +472,41 @@ struct server_task {
                         }
                     }
                 }
+            }
+        }
+
+        {
+            params.sampling.allowed_tokens.clear();
+            const auto & allowed_tokens = data.find("allowed_tokens");
+            const auto & logit_bias = data.find("logit_bias");
+            
+            if ((logit_bias == data.end() || (logit_bias->is_array() && logit_bias->empty())) && (allowed_tokens != data.end() && allowed_tokens->is_array() && !allowed_tokens->empty())) {
+
+                std::unordered_set<llama_token> allowed_set;
+                allowed_set.reserve(allowed_tokens->size());
+
+                for (const auto& el : *allowed_tokens) {
+                    if (el.is_number_integer()) {
+                        allowed_set.insert(el.get<llama_token>());
+                    }
+                }
+
+                if (!allowed_set.empty()) {
+                    const int n_vocab = llama_vocab_n_tokens(vocab);
+
+                    // Special tokens (0, 1, 2) are always allowed
+                    for (llama_token tok = 3; tok < n_vocab + 1; ++tok) {
+                        if (allowed_set.find(tok) == allowed_set.end()) {
+                            // If the token is not in the allowed set, we mask it
+                            params.sampling.logit_bias.push_back({tok, -INFINITY});
+                        }
+                    }
+                } else {
+                    LOG_WRN("Warning: 'allowed_tokens' must be a list of integers.\n");
+                }
+
+            } else if (allowed_tokens != data.end() && allowed_tokens->is_array() && !allowed_tokens->empty()) {
+                LOG_WRN("Warning: 'allowed_tokens' is set, but 'logit_bias' is also set. 'allowed_tokens' will be ignored.\n");
             }
         }
 
