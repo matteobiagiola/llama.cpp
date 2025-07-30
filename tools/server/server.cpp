@@ -188,7 +188,7 @@ struct slot_params {
             {"ignore_eos",                sampling.ignore_eos},
             {"stream",                    stream},
             {"logit_bias",                format_logit_bias(sampling.logit_bias)},
-            {"allowed_tokens",              format_allowed_tokens(sampling.allowed_tokens)},
+            {"allowed_tokens",            format_allowed_tokens(sampling.allowed_tokens)},
             {"n_probs",                   sampling.n_probs},
             {"min_keep",                  sampling.min_keep},
             {"grammar",                   sampling.grammar},
@@ -500,8 +500,30 @@ struct server_task {
                 if (!allowed_set.empty()) {
                     const int n_vocab = llama_vocab_n_tokens(vocab);
 
-                    // Special tokens (0, 1, 2) are always allowed
-                    for (llama_token tok = 3; tok < n_vocab + 1; ++tok) {
+                    std::unordered_set<llama_token> special_tokens;
+                    special_tokens.insert(llama_vocab_bos(vocab)); 
+                    special_tokens.insert(llama_vocab_eos(vocab)); 
+                    special_tokens.insert(llama_vocab_eot(vocab)); 
+                    special_tokens.insert(llama_vocab_eom(vocab)); 
+                    special_tokens.insert(llama_vocab_unknown(vocab)); 
+                    special_tokens.insert(llama_vocab_sep(vocab));
+                    special_tokens.insert(llama_vocab_pad(vocab));
+                    special_tokens.insert(llama_vocab_mask(vocab));
+                    special_tokens.insert(llama_vocab_nl(vocab));
+                    special_tokens.insert(llama_vocab_fim_pre(vocab));
+                    special_tokens.insert(llama_vocab_fim_suf(vocab));
+                    special_tokens.insert(llama_vocab_fim_mid(vocab));
+                    special_tokens.insert(llama_vocab_fim_pad(vocab));
+                    special_tokens.insert(llama_vocab_fim_rep(vocab));
+                    special_tokens.insert(llama_vocab_fim_sep(vocab));
+
+                    // Special tokens are always allowed
+                    for (llama_token tok = 0; tok < n_vocab + 1; ++tok) {
+
+                        if (special_tokens.find(tok) != special_tokens.end()) {
+                            continue; // skip special tokens
+                        }
+
                         if (allowed_set.find(tok) == allowed_set.end()) {
                             // If the token is not in the allowed set, we mask it
                             params.sampling.logit_bias.push_back({tok, -INFINITY});
@@ -4170,6 +4192,28 @@ int main(int argc, char ** argv) {
         res_ok(res, data);
     };
 
+    const auto handle_special_tokens = [&ctx_server, &res_ok](const httplib::Request &, httplib::Response & res) {
+        json data = {
+            { "bos_token",      llama_vocab_bos(ctx_server.vocab) },
+            { "eos_token",      llama_vocab_eos(ctx_server.vocab) },
+            { "eom_token",      llama_vocab_eom(ctx_server.vocab) },
+            { "eot_token",      llama_vocab_eot(ctx_server.vocab) },
+            { "sep_token",      llama_vocab_sep(ctx_server.vocab) },
+            { "nl_token",       llama_vocab_nl(ctx_server.vocab) },
+            { "uk_token",       llama_vocab_unknown(ctx_server.vocab) },
+            { "pad_token",      llama_vocab_pad(ctx_server.vocab) },
+            { "fim_pre_token",  llama_vocab_fim_pre(ctx_server.vocab) },
+            { "fim_sus_token",  llama_vocab_fim_suf(ctx_server.vocab) },
+            { "fim_mid_token",  llama_vocab_fim_mid(ctx_server.vocab) },
+            { "fim_pad_token",  llama_vocab_fim_pad(ctx_server.vocab) },
+            { "fim_rep_token",  llama_vocab_fim_rep(ctx_server.vocab) },
+            { "fim_sep_token",  llama_vocab_fim_sep(ctx_server.vocab) },
+            { "mask_token",     llama_vocab_mask(ctx_server.vocab) },
+        };
+
+        res_ok(res, data);
+    };
+
     const auto handle_props_change = [&ctx_server, &res_error, &res_ok](const httplib::Request & req, httplib::Response & res) {
         if (!ctx_server.params_base.endpoint_props) {
             res_error(res, format_error_response("This server does not support changing global properties. Start it with `--props`", ERROR_TYPE_NOT_SUPPORTED));
@@ -4605,6 +4649,51 @@ int main(int argc, char ** argv) {
         res_ok(res, data);
     };
 
+    const auto handle_detokenize_in_context = [&ctx_server, &res_ok](const httplib::Request & req, httplib::Response & res) {
+        const json body = json::parse(req.body);
+        
+        std::vector<llama_detokenized> llama_detokenized;
+
+        if (body.count("context_tokens") != 0) {
+            const llama_tokens context_tokens = body.at("context_tokens");
+            std::vector<llama_token> tokens_to_use;
+            const int n_vocab = llama_vocab_n_tokens(ctx_server.vocab);
+
+            if (body.count("tokens_to_append") != 0) {
+                const llama_tokens tokens = body.at("tokens_to_append");
+                tokens_to_use.reserve(tokens.size() - 1);
+                llama_detokenized.reserve(tokens.size() - 1);
+
+                for (const auto & token : tokens) {
+                    if (token < n_vocab) {
+                        tokens_to_use.push_back(token);
+                    }
+                }
+                
+            } else {
+                tokens_to_use.reserve(n_vocab - 1);
+                llama_detokenized.reserve(n_vocab - 1);
+                for (llama_token token = 0; token < n_vocab; ++token) {
+                    tokens_to_use.push_back(token);
+                }
+            }
+
+            const std::string context_content = tokens_to_str(ctx_server.ctx, context_tokens.cbegin(), context_tokens.cend());
+
+            for (llama_token token : tokens_to_use) {
+                llama_tokens extended_tokens = context_tokens;
+                extended_tokens.push_back(token);
+                const std::string content = tokens_to_str(ctx_server.ctx, extended_tokens.cbegin(), extended_tokens.cend());
+
+                llama_detokenized.push_back({content.substr(context_content.size())});
+
+            }
+        }
+
+        const json data = format_detokenized_in_context_response(llama_detokenized);
+        res_ok(res, data);
+    };
+
     const auto handle_embeddings_impl = [&ctx_server, &res_error, &res_ok](const httplib::Request & req, httplib::Response & res, oaicompat_type oaicompat) {
         if (!ctx_server.params_base.embedding) {
             res_error(res, format_error_response("This server does not support embeddings. Start it with `--embeddings`", ERROR_TYPE_NOT_SUPPORTED));
@@ -4872,37 +4961,39 @@ int main(int argc, char ** argv) {
     }
 
     // register API routes
-    svr->Get (params.api_prefix + "/health",              handle_health); // public endpoint (no API key check)
-    svr->Get (params.api_prefix + "/metrics",             handle_metrics);
-    svr->Get (params.api_prefix + "/props",               handle_props);
-    svr->Post(params.api_prefix + "/props",               handle_props_change);
-    svr->Post(params.api_prefix + "/api/show",            handle_api_show);
-    svr->Get (params.api_prefix + "/models",              handle_models); // public endpoint (no API key check)
-    svr->Get (params.api_prefix + "/v1/models",           handle_models); // public endpoint (no API key check)
-    svr->Get (params.api_prefix + "/api/tags",            handle_models); // ollama specific endpoint. public endpoint (no API key check)
-    svr->Post(params.api_prefix + "/completion",          handle_completions); // legacy
-    svr->Post(params.api_prefix + "/completions",         handle_completions);
-    svr->Post(params.api_prefix + "/v1/completions",      handle_completions_oai);
-    svr->Post(params.api_prefix + "/chat/completions",    handle_chat_completions);
-    svr->Post(params.api_prefix + "/v1/chat/completions", handle_chat_completions);
-    svr->Post(params.api_prefix + "/api/chat",            handle_chat_completions); // ollama specific endpoint
-    svr->Post(params.api_prefix + "/infill",              handle_infill);
-    svr->Post(params.api_prefix + "/embedding",           handle_embeddings); // legacy
-    svr->Post(params.api_prefix + "/embeddings",          handle_embeddings);
-    svr->Post(params.api_prefix + "/v1/embeddings",       handle_embeddings_oai);
-    svr->Post(params.api_prefix + "/rerank",              handle_rerank);
-    svr->Post(params.api_prefix + "/reranking",           handle_rerank);
-    svr->Post(params.api_prefix + "/v1/rerank",           handle_rerank);
-    svr->Post(params.api_prefix + "/v1/reranking",        handle_rerank);
-    svr->Post(params.api_prefix + "/tokenize",            handle_tokenize);
-    svr->Post(params.api_prefix + "/detokenize",          handle_detokenize);
-    svr->Post(params.api_prefix + "/apply-template",      handle_apply_template);
+    svr->Get (params.api_prefix + "/health",                handle_health); // public endpoint (no API key check)
+    svr->Get (params.api_prefix + "/metrics",               handle_metrics);
+    svr->Get (params.api_prefix + "/props",                 handle_props);
+    svr->Post(params.api_prefix + "/props",                 handle_props_change);
+    svr->Get (params.api_prefix + "/special_tokens",        handle_special_tokens);
+    svr->Post(params.api_prefix + "/api/show",              handle_api_show);
+    svr->Get (params.api_prefix + "/models",                handle_models); // public endpoint (no API key check)
+    svr->Get (params.api_prefix + "/v1/models",             handle_models); // public endpoint (no API key check)
+    svr->Get (params.api_prefix + "/api/tags",              handle_models); // ollama specific endpoint. public endpoint (no API key check)
+    svr->Post(params.api_prefix + "/completion",            handle_completions); // legacy
+    svr->Post(params.api_prefix + "/completions",           handle_completions);
+    svr->Post(params.api_prefix + "/v1/completions",        handle_completions_oai);
+    svr->Post(params.api_prefix + "/chat/completions",      handle_chat_completions);
+    svr->Post(params.api_prefix + "/v1/chat/completions",   handle_chat_completions);
+    svr->Post(params.api_prefix + "/api/chat",              handle_chat_completions); // ollama specific endpoint
+    svr->Post(params.api_prefix + "/infill",                handle_infill);
+    svr->Post(params.api_prefix + "/embedding",             handle_embeddings); // legacy
+    svr->Post(params.api_prefix + "/embeddings",            handle_embeddings);
+    svr->Post(params.api_prefix + "/v1/embeddings",         handle_embeddings_oai);
+    svr->Post(params.api_prefix + "/rerank",                handle_rerank);
+    svr->Post(params.api_prefix + "/reranking",             handle_rerank);
+    svr->Post(params.api_prefix + "/v1/rerank",             handle_rerank);
+    svr->Post(params.api_prefix + "/v1/reranking",          handle_rerank);
+    svr->Post(params.api_prefix + "/tokenize",              handle_tokenize);
+    svr->Post(params.api_prefix + "/detokenize",            handle_detokenize);
+    svr->Post(params.api_prefix + "/detokenize_in_context", handle_detokenize_in_context);
+    svr->Post(params.api_prefix + "/apply-template",        handle_apply_template);
     // LoRA adapters hotswap
-    svr->Get (params.api_prefix + "/lora-adapters",       handle_lora_adapters_list);
-    svr->Post(params.api_prefix + "/lora-adapters",       handle_lora_adapters_apply);
+    svr->Get (params.api_prefix + "/lora-adapters",         handle_lora_adapters_list);
+    svr->Post(params.api_prefix + "/lora-adapters",         handle_lora_adapters_apply);
     // Save & load slots
-    svr->Get (params.api_prefix + "/slots",               handle_slots);
-    svr->Post(params.api_prefix + "/slots/:id_slot",      handle_slots_action);
+    svr->Get (params.api_prefix + "/slots",                 handle_slots);
+    svr->Post(params.api_prefix + "/slots/:id_slot",        handle_slots_action);
 
     //
     // Start the server

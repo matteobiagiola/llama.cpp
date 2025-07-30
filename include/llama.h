@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include <string>
+
 #ifdef LLAMA_SHARED
 #    if defined(_WIN32) && !defined(__MINGW32__)
 #        ifdef LLAMA_BUILD
@@ -361,6 +363,10 @@ extern "C" {
         llama_token token;
         float bias;
     } llama_logit_bias;
+
+    typedef struct llama_detokenized {
+        std::string content;
+    } llama_detokenized;
 
     typedef struct llama_allowed_token {
         llama_token token;
@@ -1015,6 +1021,9 @@ extern "C" {
     LLAMA_API llama_token llama_vocab_nl (const struct llama_vocab * vocab); // next-line
     LLAMA_API llama_token llama_vocab_pad(const struct llama_vocab * vocab); // padding
     LLAMA_API llama_token llama_vocab_mask(const struct llama_vocab * vocab); // mask
+
+    LLAMA_API llama_token llama_vocab_unknown(const struct llama_vocab * vocab);
+    LLAMA_API llama_token llama_vocab_eom(const struct llama_vocab * vocab);
 
     LLAMA_API bool llama_vocab_get_add_bos(const struct llama_vocab * vocab);
     LLAMA_API bool llama_vocab_get_add_eos(const struct llama_vocab * vocab);

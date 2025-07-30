@@ -3548,6 +3548,14 @@ llama_token llama_vocab_eot(const struct llama_vocab * vocab) {
     return vocab->token_eot();
 }
 
+llama_token llama_vocab_unknown(const struct llama_vocab * vocab) {
+    return vocab->token_unk();
+}
+
+llama_token llama_vocab_eom(const struct llama_vocab * vocab) {
+    return vocab->token_eom();
+}
+
 // deprecated
 llama_token llama_vocab_cls(const struct llama_vocab * vocab) {
     return vocab->token_bos();

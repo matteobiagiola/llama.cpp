@@ -986,6 +986,18 @@ static json format_detokenized_response(const std::string & content) {
     };
 }
 
+static json format_detokenized_in_context_response(const std::vector<llama_detokenized> & llama_detokenized) {
+    json tokens_in_context_response = json::array();
+    std::vector<std::string> content_vector;
+    content_vector.reserve(llama_detokenized.size() - 1);
+    for (const auto & ld : llama_detokenized) {
+        content_vector.push_back(ld.content);
+    }
+    return json {
+        {"content_in_context", content_vector}
+    };
+}
+
 static json format_logit_bias(const std::vector<llama_logit_bias> & logit_bias) {
     json data = json::array();
     for (const auto & lb : logit_bias) {
