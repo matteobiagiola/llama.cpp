@@ -1,6 +1,7 @@
 #include "common.cuh"
 #include "fattn-common.cuh"
 #include "fattn-tile.cuh"
+#include "fattn-wmma-f16.cuh"
 
 // kq_stride == number of KQ rows to process per iteration
 // kq_nbatch == number of K columns to load in parallel for KQ calculation
@@ -35,7 +36,6 @@ static int fattn_tile_get_kq_stride_host(const int D, const int ncols, const int
         switch (D) {
             case 64:
             case 128:
-                return 128;
             case 256:
                 return ncols <= 16 ? 128 : 64;
             default:
@@ -86,7 +86,6 @@ static constexpr __device__ int fattn_tile_get_kq_stride_device(int D, int ncols
     switch (D) {
         case 64:
         case 128:
-            return 128;
         case 256:
             return ncols <= 16 ? 128 : 64;
         default:
@@ -192,10 +191,10 @@ static __global__ void flash_attn_tile(
 #ifdef FLASH_ATTN_AVAILABLE
 
     // Skip unused kernel variants for faster compilation:
-#ifdef FP16_MMA_AVAILABLE
+#ifdef GGML_USE_WMMA_FATTN
     NO_DEVICE_CODE;
     return;
-#endif // FP16_MMA_AVAILABLE
+#endif // GGML_USE_WMMA_FATTN
 
     if (use_logit_softcap && !(D == 128 || D == 256)) {
         GGML_UNUSED_VARS(Q, K, V, mask, sinks, KV_max, dst, dst_meta, scale,

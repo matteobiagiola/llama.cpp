@@ -19,11 +19,12 @@ export { default as MessageBranchingControls } from './chat/ChatMessages/ChatMes
 export { default as ChatProcessingInfo } from './chat/ChatProcessingInfo.svelte';
 
 export { default as ChatScreenHeader } from './chat/ChatScreen/ChatScreenHeader.svelte';
+export { default as ChatScreenWarning } from './chat/ChatScreen/ChatScreenWarning.svelte';
 export { default as ChatScreen } from './chat/ChatScreen/ChatScreen.svelte';
 
 export { default as ChatSettingsDialog } from './chat/ChatSettings/ChatSettingsDialog.svelte';
-export { default as ChatSettingsSection } from './chat/ChatSettings/ChatSettingsSection.svelte';
 export { default as ChatSettingsFooter } from './chat/ChatSettings/ChatSettingsFooter.svelte';
+export { default as ChatSettingsFields } from './chat/ChatSettings/ChatSettingsFields.svelte';
 
 export { default as ChatSidebar } from './chat/ChatSidebar/ChatSidebar.svelte';
 export { default as ChatSidebarConversationItem } from './chat/ChatSidebar/ChatSidebarConversationItem.svelte';
