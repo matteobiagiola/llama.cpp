@@ -249,10 +249,9 @@ struct mtmd_context {
         } else if (proj == PROJECTOR_TYPE_IDEFICS3) {
             // https://github.com/huggingface/transformers/blob/a42ba80fa520c784c8f11a973ca9034e5f859b79/src/transformers/models/idefics3/processing_idefics3.py#L192-L215
             slice_tmpl         = MTMD_SLICE_TMPL_IDEFICS3;
-            tok_ov_img_start   = {lookup_token("\n"), lookup_token("<fake_token_around_image>"), lookup_token("<global-img>")};
+            tok_ov_img_start   = {lookup_token("\n\n"), lookup_token("<fake_token_around_image>"), lookup_token("<global-img>")};
             tok_ov_img_end     = {lookup_token("<fake_token_around_image>")};
             tok_row_end        = {lookup_token("\n")};
-            img_beg            = "<fake_token_around_image>";
             sli_img_start_tmpl = "<fake_token_around_image><row_%d_col_%d>";
 
         } else if (proj == PROJECTOR_TYPE_PIXTRAL) {
@@ -275,6 +274,11 @@ struct mtmd_context {
             // <img> ... (image embeddings) ... </img>
             img_beg = "<img>";
             img_end = "</img>";
+
+        } else if (proj == PROJECTOR_TYPE_LIGHTONOCR) {
+            // <|im_start|> ... (image embeddings) ... <|im_end|>
+            img_beg = "<|im_start|>";
+            img_end = "<|im_end|>";
 
         }
     }
