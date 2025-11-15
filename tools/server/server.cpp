@@ -5008,7 +5008,7 @@ int main(int argc, char ** argv) {
         res_ok(res, data);
     };
 
-    const auto handle_special_tokens = [&ctx_server, &res_ok](const httplib::Request &, httplib::Response & res) {
+    const auto handle_special_tokens = [&ctx_server](const httplib::Request &, httplib::Response & res) {
         json data = {
             { "bos_token",      llama_vocab_bos(ctx_server.vocab) },
             { "eos_token",      llama_vocab_eos(ctx_server.vocab) },
