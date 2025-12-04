@@ -601,7 +601,6 @@ struct server_task {
                     special_tokens.insert(llama_vocab_sep(vocab));
                     special_tokens.insert(llama_vocab_pad(vocab));
                     special_tokens.insert(llama_vocab_mask(vocab));
-                    special_tokens.insert(llama_vocab_nl(vocab));
                     special_tokens.insert(llama_vocab_fim_pre(vocab));
                     special_tokens.insert(llama_vocab_fim_suf(vocab));
                     special_tokens.insert(llama_vocab_fim_mid(vocab));
