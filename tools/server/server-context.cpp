@@ -13,6 +13,9 @@
 #include "mtmd.h"
 #include "mtmd-helper.h"
 
+#include "../../src/llama-grammar.h"
+#include "../../src/unicode.h"
+
 #include <cstddef>
 #include <cinttypes>
 #include <memory>
@@ -2992,7 +2995,7 @@ void server_routes::init_routes() {
         return res;
     };
 
-    this->post_special_tokens = [this](const server_http_req &) {
+    this->get_special_tokens = [this](const server_http_req &) {
         auto res = std::make_unique<server_res_generator>(ctx_server);
         json data = {
             { "bos_token",      llama_vocab_bos(ctx_server.vocab) },
@@ -3508,6 +3511,60 @@ void server_routes::init_routes() {
         res->ok(result->to_json());
         return res;
     };
+
+    this->get_grammar_validate = [this](const server_http_req & req) {
+        auto res = std::make_unique<server_res_generator>(ctx_server);
+        const json body = json::parse(req.body);
+        std::string grammar_str = body.at("grammar");
+        llama_grammar * grammar = llama_grammar_init_impl(nullptr, grammar_str.c_str(), "root", false, nullptr, 0, nullptr, 0);
+        if (grammar == nullptr) {
+            res->error(format_error_response("Failed to parse grammar", ERROR_TYPE_INVALID_REQUEST));
+            return res;
+        }
+
+        std::string input_str = body.at("input_str");
+
+        // Validate the input string against the grammar
+        size_t error_pos;
+        std::string error_msg;
+        bool is_valid = handle_grammar_validate(grammar, input_str, error_pos, error_msg);
+        
+        llama_grammar_free_impl(grammar);
+        
+        res->ok(json{{"token_ok", is_valid, "error_pos", error_pos, "error_msg", error_msg}});
+        return res;
+    };
+
+}
+
+bool server_routes::handle_grammar_validate(struct llama_grammar * grammar, const std::string & input_str, size_t & error_pos, std::string & error_msg) {
+
+    const auto cpts = unicode_cpts_from_utf8(input_str);
+
+    auto & stacks_cur = llama_grammar_get_stacks(grammar);
+
+    size_t pos = 0;
+    for (const auto & cpt : cpts) {
+        llama_grammar_accept(grammar, cpt);
+
+        if (stacks_cur.empty()) {
+            error_pos = pos;
+            error_msg = "Unexpected character '" + unicode_cpt_to_utf8(cpt) + "'";
+            return false;
+        }
+        ++pos;
+    }
+
+    for (const auto & stack : stacks_cur) {
+        if (stack.empty()) {
+            return true;
+        }
+    }
+
+    error_pos = pos;
+    error_msg = "Unexpected end of input";
+    return true;
+
 }
 
 std::unique_ptr<server_res_generator> server_routes::handle_slots_save(const server_http_req & req, int id_slot) {

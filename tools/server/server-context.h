@@ -50,7 +50,7 @@ struct server_routes {
     // handlers using lambda function, so that they can capture `this` without `std::bind`
     server_http_context::handler_t get_health;
     server_http_context::handler_t get_metrics;
-    server_http_context::handler_t post_special_tokens;
+    server_http_context::handler_t get_special_tokens;
     server_http_context::handler_t get_slots;
     server_http_context::handler_t post_slots;
     server_http_context::handler_t get_props;
@@ -72,12 +72,15 @@ struct server_routes {
     server_http_context::handler_t post_rerank;
     server_http_context::handler_t get_lora_adapters;
     server_http_context::handler_t post_lora_adapters;
+    server_http_context::handler_t get_grammar_validate;
 private:
     // TODO: move these outside of server_routes?
     std::unique_ptr<server_res_generator> handle_slots_save(const server_http_req & req, int id_slot);
     std::unique_ptr<server_res_generator> handle_slots_restore(const server_http_req & req, int id_slot);
     std::unique_ptr<server_res_generator> handle_slots_erase(const server_http_req &, int id_slot);
     std::unique_ptr<server_res_generator> handle_embeddings_impl(const server_http_req & req, task_response_type res_type);
+    bool handle_grammar_validate(struct llama_grammar * grammar, const std::string & input_str, size_t & error_pos, std::string & error_msg);
+
 
     const common_params & params;
     server_context_impl & ctx_server;

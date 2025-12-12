@@ -157,7 +157,7 @@ int main(int argc, char ** argv, char ** envp) {
     ctx_http.get ("/metrics",             ex_wrapper(routes.get_metrics));
     ctx_http.get ("/props",               ex_wrapper(routes.get_props));
     ctx_http.post("/props",               ex_wrapper(routes.post_props));
-    ctx_http.post("/special_tokens",      ex_wrapper(routes.post_special_tokens));
+    ctx_http.get("/special_tokens",       ex_wrapper(routes.get_special_tokens));
     ctx_http.post("/api/show",            ex_wrapper(routes.get_api_show));
     ctx_http.get ("/models",              ex_wrapper(routes.get_models)); // public endpoint (no API key check)
     ctx_http.get ("/v1/models",           ex_wrapper(routes.get_models)); // public endpoint (no API key check)
@@ -188,6 +188,8 @@ int main(int argc, char ** argv, char ** envp) {
     // Save & load slots
     ctx_http.get ("/slots",               ex_wrapper(routes.get_slots));
     ctx_http.post("/slots/:id_slot",      ex_wrapper(routes.post_slots));
+
+    ctx_http.get("/grammar/validate",     ex_wrapper(routes.get_grammar_validate));
 
     //
     // Start the server
