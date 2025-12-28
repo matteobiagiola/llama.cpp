@@ -3324,7 +3324,7 @@ void server_routes::init_routes() {
     };
 
     this->get_special_tokens = [this](const server_http_req &) {
-        auto res = std::make_unique<server_res_generator>(ctx_server);
+        auto res = create_response();
         json data = {
             { "bos_token",      llama_vocab_bos(ctx_server.vocab) },
             { "eos_token",      llama_vocab_eos(ctx_server.vocab) },
@@ -3646,7 +3646,7 @@ void server_routes::init_routes() {
 
     // TODO: did not test this yet after refactoring
     this->post_detokenize_in_context = [this](const server_http_req & req) {
-        auto res = std::make_unique<server_res_generator>(ctx_server);
+        auto res = create_response();
         const json body = json::parse(req.body);
         
         std::vector<std::string> content_vector;
@@ -3675,12 +3675,12 @@ void server_routes::init_routes() {
                 }
             }
 
-            const std::string context_content = tokens_to_str(ctx_server.ctx, context_tokens);
+            const std::string context_content = tokens_to_str(ctx_server.vocab, context_tokens);
 
             for (llama_token token : tokens_to_use) {
                 llama_tokens extended_tokens = context_tokens;
                 extended_tokens.push_back(token);
-                const std::string content = tokens_to_str(ctx_server.ctx, extended_tokens);
+                const std::string content = tokens_to_str(ctx_server.vocab, extended_tokens);
 
                 content_vector.push_back({content.substr(context_content.size())});
 
@@ -3832,7 +3832,7 @@ void server_routes::init_routes() {
     };
 
     this->get_grammar_validate = [this](const server_http_req & req) {
-        auto res = std::make_unique<server_res_generator>(ctx_server);
+        auto res = create_response();
         const json body = json::parse(req.body);
         std::string grammar_str = body.at("grammar");
         llama_grammar * grammar = llama_grammar_init_impl(nullptr, grammar_str.c_str(), "root", false, nullptr, 0, nullptr, 0);
@@ -3850,7 +3850,12 @@ void server_routes::init_routes() {
         
         llama_grammar_free_impl(grammar);
         
-        res->ok(json{{"token_ok", is_valid, "error_pos", error_pos, "error_msg", error_msg}});
+        res->ok(
+            json {
+                {"token_ok", is_valid}, 
+                {"error_pos", error_pos}, 
+                {"error_msg", error_msg}
+            });
         return res;
     };
 

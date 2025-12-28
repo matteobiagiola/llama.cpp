@@ -1432,11 +1432,6 @@ static std::string tokens_to_str(const llama_vocab * ctx, Iter begin, Iter end) 
     return ret;
 }
 
-std::string tokens_to_str(llama_context * ctx, const llama_tokens & tokens) {
-    auto model = llama_get_model(ctx);
-    return tokens_to_str(llama_model_get_vocab(model), tokens.begin(), tokens.end());
-}
-
 std::string tokens_to_str(const llama_vocab * vocab, const llama_tokens & tokens) {
     return tokens_to_str(vocab, tokens.begin(), tokens.end());
 }

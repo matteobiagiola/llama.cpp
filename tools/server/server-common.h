@@ -321,8 +321,6 @@ json format_response_rerank(
 std::vector<llama_token_data> get_token_probabilities(llama_context * ctx, int idx);
 
 std::string safe_json_to_str(const json & data);
-
-std::string tokens_to_str(llama_context * ctx, const llama_tokens & tokens);
 std::string tokens_to_str(const llama_vocab * vocab, const llama_tokens & tokens);
 
 // format incomplete utf-8 multibyte character for output
