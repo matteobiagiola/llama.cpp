@@ -62,6 +62,7 @@ add_library(llama
             models/ernie4-5.cpp
             models/exaone.cpp
             models/exaone4.cpp
+            models/exaone-moe.cpp
             models/falcon-h1.cpp
             models/falcon.cpp
             models/gemma-embedding.cpp
@@ -87,6 +88,7 @@ add_library(llama
             models/llada.cpp
             models/llama-iswa.cpp
             models/llama.cpp
+            models/maincoder.cpp
             models/mamba.cpp
             models/mimo2-iswa.cpp
             models/minicpm3.cpp
@@ -107,6 +109,7 @@ add_library(llama
             models/phi3.cpp
             models/plamo.cpp
             models/plamo2.cpp
+            models/plamo3.cpp
             models/plm.cpp
             models/qwen.cpp
             models/qwen2.cpp
