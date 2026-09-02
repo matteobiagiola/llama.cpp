@@ -173,6 +173,7 @@ int main(int argc, char ** argv) {
     ctx_http.get ("/props",               ex_wrapper(routes.get_props));
     ctx_http.post("/props",               ex_wrapper(routes.post_props));
     ctx_http.get("/special_tokens",       ex_wrapper(routes.get_special_tokens));
+    ctx_http.get("/eog_tokens",           ex_wrapper(routes.get_eog_tokens));
     ctx_http.post("/api/show",            ex_wrapper(routes.get_api_show));
     ctx_http.get ("/models",              ex_wrapper(routes.get_models)); // public endpoint (no API key check)
     ctx_http.get ("/v1/models",           ex_wrapper(routes.get_models)); // public endpoint (no API key check)

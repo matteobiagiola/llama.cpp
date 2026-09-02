@@ -3555,6 +3555,16 @@ void server_routes::init_routes() {
         return res;
     };
 
+    this->get_eog_tokens = [this](const server_http_req &) {
+        auto res = create_response();
+        json ids = json::array();
+        for (llama_token id = 0; id < llama_vocab_n_tokens(ctx_server.vocab); ++id)
+            if (llama_vocab_is_eog(ctx_server.vocab, id)) ids.push_back(id);
+        
+        res->ok({{"eog_token_ids", ids}});
+        return res;
+    };
+
     this->get_api_show = [this](const server_http_req &) {
         auto res = create_response();
         std::string tmpl_default = common_chat_templates_source(meta->chat_params.tmpls.get(), "");
